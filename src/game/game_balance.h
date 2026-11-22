@@ -3,7 +3,8 @@
 #include "core/memory.h"
 #include <game/types.h>
 
-// TODO: clean up entries that didn't exist in 17339
+// AUDIT 2026-11-22: kept as-is - no 17339 reference proves which entries are later additions;
+// removing one would renumber the values. See docs/vanilla-data-audit.md.
 enum GameBalanceType : int
 {
     GB_KEYWORD = -2,

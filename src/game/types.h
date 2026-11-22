@@ -383,7 +383,8 @@ enum ItemQualityLevel : int
     IQL_DISPLAY_AS_SET_ITEM = IQL_NUM_ITEM_QUALITY_LEVELS,
 };
 
-// TODO: clean up entries that didn't exist in 17339
+// AUDIT 2026-11-22: kept as-is - no 17339 reference proves which entries are later additions;
+// removing one would renumber the values. See docs/vanilla-data-audit.md.
 enum ItemLabel : int
 {
     ITL_INVALID = -1,
@@ -566,7 +567,8 @@ enum DamageType : int
     NUM_DAMAGE_TYPES,
 };
 
-// TODO: clean up entries that didn't exist in 17339
+// AUDIT 2026-11-22: kept as-is - no 17339 reference proves which entries are later additions;
+// removing one would renumber the values. See docs/vanilla-data-audit.md.
 enum EffectType
 {
     EFFECT_INVALID = -1,
@@ -693,7 +695,8 @@ enum SocketDisconnectReason
     SDR_BOOT,
 };
 
-// TODO: clean up entries that didn't exist in 17339
+// AUDIT 2026-11-22: kept as-is - no 17339 reference proves which entries are later additions;
+// removing one would renumber the values. See docs/vanilla-data-audit.md.
 enum RevivalType : int
 {
     REVIVAL_TYPE_IN_TOWN,

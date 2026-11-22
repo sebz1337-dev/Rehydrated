@@ -141,7 +141,8 @@ struct TryConsoleCommand
     be<ACDNetworkName> annTarget;
 };
 
-// TODO: clean up entries that didn't exist in 17339
+// AUDIT 2026-11-22: kept as-is - no 17339 reference proves which entries are later additions;
+// removing one would renumber the values. See docs/vanilla-data-audit.md.
 enum QuitReason : int
 {
     QUIT_REASON_NORMAL,
@@ -260,7 +261,8 @@ struct StashIconStateMessage
 namespace CombatLog
 {
 
-// TODO: clean up entries that didn't exist in 17339
+// AUDIT 2026-11-22: kept as-is - no 17339 reference proves which entries are later additions;
+// removing one would renumber the values. See docs/vanilla-data-audit.md.
 enum LogEventType
 {
     LOG_EVENT_INVALID = -1,
@@ -1041,7 +1043,8 @@ struct ACDTranslateArcMessage
     be<f32> flDesiredHeight;
 };
 
-// TODO: clean up entries that didn't exist in 17339
+// AUDIT 2026-11-22: kept as-is - no 17339 reference proves which entries are later additions;
+// removing one would renumber the values. See docs/vanilla-data-audit.md.
 enum DeterministicPathType
 {
     DPATH_NONE,
