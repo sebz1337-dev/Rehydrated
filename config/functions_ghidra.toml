@@ -1,0 +1,19 @@
+# Function starts for the 12 addresses in functions_unresolved.toml.
+# Ghidra 12.2 headless analysis of the decrypted 17339 image did not promote
+# these to functions, but their addresses are real code starts: six have
+# disassembly (see E:\dev\d3\ghidra_unresolved.txt), the rest are mid-function
+# entry points recorded by codegen validation. Names stay deterministic until
+# a semantic name is established in IDA/Ghidra.
+[functions]
+0x82361630 = { name = "sub_82361630" }
+0x824847C8 = { name = "sub_824847C8" }
+0x824E74D0 = { name = "sub_824E74D0" }
+0x824ED0F8 = { name = "sub_824ED0F8" }
+0x826457D8 = { name = "sub_826457D8" }
+0x82AB5D50 = { name = "sub_82AB5D50" }
+0x82D455C8 = { name = "sub_82D455C8" }
+0x82D7DB30 = { name = "sub_82D7DB30" }
+0x82D80770 = { name = "sub_82D80770" }
+0x82D81098 = { name = "sub_82D81098" }
+0x82D82D10 = { name = "sub_82D82D10" }
+0x82D84048 = { name = "sub_82D84048" }

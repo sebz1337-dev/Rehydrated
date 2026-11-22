@@ -12,6 +12,7 @@ includes = [
 	"config/rexcrt.toml",
 	"config/functions_unresolved.toml",
 	"config/functions.toml",
+	"config/functions_ghidra.toml",
 	"config/hooks/game.toml",
 	"config/hooks/input.toml",
 	"config/hooks/network.toml",
