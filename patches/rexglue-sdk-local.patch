@@ -10,8 +10,333 @@ index 9b3cdf56..9a4fb87f 100644
      FLOOR_MAJOR ${PROJECT_VERSION_MAJOR}
      FLOOR_MINOR ${PROJECT_VERSION_MINOR})
  
+diff --git a/include/rex/hook.h b/include/rex/hook.h
+index 4ce4f9b9..dd6c7d39 100644
+--- a/include/rex/hook.h
++++ b/include/rex/hook.h
+@@ -81,6 +81,15 @@
+   REX_STUB_RETURN(name, retval)              \
+   static rex::ppc::detail::PPCFuncRegistrar _ppc_reg_##name(#name, &name);
+ 
++// Silent no-op export: identical behavior to REX_EXPORT_STUB, minus the
++// warning. Used for console-only features that are unavailable offline.
++#define REX_EXPORT_NOOP(name)                       \
++  extern "C" REX_FUNC(name) {                       \
++    (void)ctx;                                      \
++    (void)base;                                     \
++  }                                                 \
++  static rex::ppc::detail::PPCFuncRegistrar _ppc_reg_##name(#name, &name);
++
+ namespace rex {
+ 
+ //=============================================================================
+diff --git a/src/kernel/xam/xam_content.cpp b/src/kernel/xam/xam_content.cpp
+index 1fb1e16a..c581bedf 100644
+--- a/src/kernel/xam/xam_content.cpp
++++ b/src/kernel/xam/xam_content.cpp
+@@ -446,10 +446,10 @@ REX_EXPORT_STUB(__imp__XamContentGetLocalizedString);
+ REX_EXPORT_STUB(__imp__XamContentGetMetaDataInternal);
+ REX_EXPORT_STUB(__imp__XamContentGetMountedPackageByRootName);
+ REX_EXPORT_STUB(__imp__XamContentGetOnlineCreator);
+-REX_EXPORT_STUB(__imp__XamContentInstall);
++REX_EXPORT_NOOP(__imp__XamContentInstall);
+ REX_EXPORT_STUB(__imp__XamContentInstallInternal);
+ REX_EXPORT_STUB(__imp__XamContentIsGameInstalledToHDD);
+-REX_EXPORT_STUB(__imp__XamContentLaunchImage);
++REX_EXPORT_NOOP(__imp__XamContentLaunchImage);
+ REX_EXPORT_STUB(__imp__XamContentLaunchImageFromFileInternal);
+ REX_EXPORT_STUB(__imp__XamContentLaunchImageInternal);
+ REX_EXPORT_STUB(__imp__XamContentLaunchImageInternalEx);
+diff --git a/src/kernel/xam/xam_locale.cpp b/src/kernel/xam/xam_locale.cpp
+index 4496ac3b..53b52748 100644
+--- a/src/kernel/xam/xam_locale.cpp
++++ b/src/kernel/xam/xam_locale.cpp
+@@ -418,7 +418,7 @@ REX_EXPORT_STUB(__imp__XamFormatMessage);
+ REX_EXPORT_STUB(__imp__XamFormatSystemDateString);
+ REX_EXPORT_STUB(__imp__XamGetCountry);
+ REX_EXPORT_STUB(__imp__XamGetCurrencyFormat);
+-REX_EXPORT_STUB(__imp__XamGetLanguage);
++REX_EXPORT_NOOP(__imp__XamGetLanguage);
+ REX_EXPORT_STUB(__imp__XamGetLanguageLocaleFallbackString);
+ REX_EXPORT_STUB(__imp__XamGetLanguageTypeface);
+ REX_EXPORT_STUB(__imp__XamGetLanguageTypefacePatch);
+diff --git a/src/kernel/xam/xam_misc.cpp b/src/kernel/xam/xam_misc.cpp
+index ff6cb56a..b94fa04f 100644
+--- a/src/kernel/xam/xam_misc.cpp
++++ b/src/kernel/xam/xam_misc.cpp
+@@ -237,13 +237,13 @@ REX_EXPORT_STUB(__imp__XNetLogonGetExtendedStatus);
+ REX_EXPORT_STUB(__imp__XNetLogonGetFlowToken);
+ REX_EXPORT_STUB(__imp__XNetLogonGetLastUPnPStatus);
+ REX_EXPORT_STUB(__imp__XNetLogonGetLoggedOnUsers);
+-REX_EXPORT_STUB(__imp__XNetLogonGetMachineID);
++REX_EXPORT_NOOP(__imp__XNetLogonGetMachineID);
+ REX_EXPORT_STUB(__imp__XNetLogonGetNatType);
+ REX_EXPORT_STUB(__imp__XNetLogonGetServiceInfo);
+ REX_EXPORT_STUB(__imp__XNetLogonGetServiceNetworkID);
+ REX_EXPORT_STUB(__imp__XNetLogonGetState);
+ REX_EXPORT_STUB(__imp__XNetLogonGetTicketOpt);
+-REX_EXPORT_STUB(__imp__XNetLogonGetTitleID);
++REX_EXPORT_NOOP(__imp__XNetLogonGetTitleID);
+ REX_EXPORT_STUB(__imp__XNetLogonGetTitleVersion);
+ REX_EXPORT_STUB(__imp__XNetLogonGetUserPrivileges);
+ REX_EXPORT_STUB(__imp__XNetLogonInitOverrideInfo);
+@@ -277,7 +277,7 @@ REX_EXPORT_STUB(__imp__XamAccountRecoveryRecoverAllProfileData);
+ REX_EXPORT_STUB(__imp__XamAccountRecoveryRecoverTitle);
+ REX_EXPORT_STUB(__imp__XamActivateCounterMeasure);
+ REX_EXPORT_STUB(__imp__XamAllocDevkitHeapAvailable);
+-REX_EXPORT_STUB(__imp__XamAllocEx);
++REX_EXPORT_NOOP(__imp__XamAllocEx);
+ REX_EXPORT_STUB(__imp__XamAllocFreeIPTVHeap);
+ REX_EXPORT_STUB(__imp__XamAllocHeapFreeSpace);
+ REX_EXPORT_STUB(__imp__XamAllocMountIPTVHeap);
+@@ -677,7 +677,7 @@ REX_EXPORT_STUB(__imp__XamRamDriveDestroy);
+ REX_EXPORT_STUB(__imp__XamReadBiometricData);
+ REX_EXPORT_STUB(__imp__XamReadGameTileImage);
+ REX_EXPORT_STUB(__imp__XamReadImage);
+-REX_EXPORT_STUB(__imp__XamReadString);
++REX_EXPORT_NOOP(__imp__XamReadString);
+ REX_EXPORT_STUB(__imp__XamReadStrings);
+ REX_EXPORT_STUB(__imp__XamReadTile);
+ REX_EXPORT_STUB(__imp__XamReadTileEx);
+diff --git a/src/kernel/xam/xam_net.cpp b/src/kernel/xam/xam_net.cpp
+index 58e36a4b..6344b367 100644
+--- a/src/kernel/xam/xam_net.cpp
++++ b/src/kernel/xam/xam_net.cpp
+@@ -1000,11 +1000,11 @@ REX_EXPORT_STUB(__imp__NetDll_UpnpEventUnsubscribe);
+ REX_EXPORT_STUB(__imp__NetDll_UpnpSearchCreate);
+ REX_EXPORT_STUB(__imp__NetDll_UpnpSearchGetDevices);
+ REX_EXPORT_STUB(__imp__NetDll_UpnpStartup);
+-REX_EXPORT_STUB(__imp__NetDll_WSACancelOverlappedIO);
+-REX_EXPORT_STUB(__imp__NetDll_WSAEventSelect);
+-REX_EXPORT_STUB(__imp__NetDll_WSAGetOverlappedResult);
+-REX_EXPORT_STUB(__imp__NetDll_WSARecv);
+-REX_EXPORT_STUB(__imp__NetDll_WSASend);
++REX_EXPORT_NOOP(__imp__NetDll_WSACancelOverlappedIO);
++REX_EXPORT_NOOP(__imp__NetDll_WSAEventSelect);
++REX_EXPORT_NOOP(__imp__NetDll_WSAGetOverlappedResult);
++REX_EXPORT_NOOP(__imp__NetDll_WSARecv);
++REX_EXPORT_NOOP(__imp__NetDll_WSASend);
+ REX_EXPORT_STUB(__imp__NetDll_WSAStartupEx);
+ REX_EXPORT_STUB(__imp__NetDll_XHttpCloseHandle);
+ REX_EXPORT_STUB(__imp__NetDll_XHttpConnect);
+@@ -1030,73 +1030,73 @@ REX_EXPORT_STUB(__imp__NetDll_XHttpSetStatusCallback);
+ REX_EXPORT_STUB(__imp__NetDll_XHttpShutdown);
+ REX_EXPORT_STUB(__imp__NetDll_XHttpStartup);
+ REX_EXPORT_STUB(__imp__NetDll_XHttpWriteData);
+-REX_EXPORT_STUB(__imp__NetDll_XNetConnect);
+-REX_EXPORT_STUB(__imp__NetDll_XNetCreateKey);
++REX_EXPORT_NOOP(__imp__NetDll_XNetConnect);
++REX_EXPORT_NOOP(__imp__NetDll_XNetCreateKey);
+ REX_EXPORT_STUB(__imp__NetDll_XNetDnsReverseLookup);
+ REX_EXPORT_STUB(__imp__NetDll_XNetDnsReverseRelease);
+-REX_EXPORT_STUB(__imp__NetDll_XNetGetBroadcastVersionStatus);
+-REX_EXPORT_STUB(__imp__NetDll_XNetGetConnectStatus);
++REX_EXPORT_NOOP(__imp__NetDll_XNetGetBroadcastVersionStatus);
++REX_EXPORT_NOOP(__imp__NetDll_XNetGetConnectStatus);
+ REX_EXPORT_STUB(__imp__NetDll_XNetGetSystemLinkPort);
+ REX_EXPORT_STUB(__imp__NetDll_XNetGetXnAddrPlatform);
+-REX_EXPORT_STUB(__imp__NetDll_XNetInAddrToServer);
+-REX_EXPORT_STUB(__imp__NetDll_XNetQosGetListenStats);
+-REX_EXPORT_STUB(__imp__NetDll_XNetQosLookup);
+-REX_EXPORT_STUB(__imp__NetDll_XNetRegisterKey);
++REX_EXPORT_NOOP(__imp__NetDll_XNetInAddrToServer);
++REX_EXPORT_NOOP(__imp__NetDll_XNetQosGetListenStats);
++REX_EXPORT_NOOP(__imp__NetDll_XNetQosLookup);
++REX_EXPORT_NOOP(__imp__NetDll_XNetRegisterKey);
+ REX_EXPORT_STUB(__imp__NetDll_XNetReplaceKey);
+-REX_EXPORT_STUB(__imp__NetDll_XNetServerToInAddr);
+-REX_EXPORT_STUB(__imp__NetDll_XNetSetOpt);
++REX_EXPORT_NOOP(__imp__NetDll_XNetServerToInAddr);
++REX_EXPORT_NOOP(__imp__NetDll_XNetSetOpt);
+ REX_EXPORT_STUB(__imp__NetDll_XNetStartupEx);
+-REX_EXPORT_STUB(__imp__NetDll_XNetTsAddrToInAddr);
+-REX_EXPORT_STUB(__imp__NetDll_XNetUnregisterInAddr);
+-REX_EXPORT_STUB(__imp__NetDll_XNetUnregisterKey);
++REX_EXPORT_NOOP(__imp__NetDll_XNetTsAddrToInAddr);
++REX_EXPORT_NOOP(__imp__NetDll_XNetUnregisterInAddr);
++REX_EXPORT_NOOP(__imp__NetDll_XNetUnregisterKey);
+ REX_EXPORT_STUB(__imp__NetDll_XmlDownloadContinue);
+ REX_EXPORT_STUB(__imp__NetDll_XmlDownloadGetParseTime);
+ REX_EXPORT_STUB(__imp__NetDll_XmlDownloadGetReceivedDataSize);
+ REX_EXPORT_STUB(__imp__NetDll_XmlDownloadStart);
+ REX_EXPORT_STUB(__imp__NetDll_XmlDownloadStop);
+-REX_EXPORT_STUB(__imp__NetDll_XnpCapture);
+-REX_EXPORT_STUB(__imp__NetDll_XnpConfig);
+-REX_EXPORT_STUB(__imp__NetDll_XnpConfigUPnP);
++REX_EXPORT_NOOP(__imp__NetDll_XnpCapture);
++REX_EXPORT_NOOP(__imp__NetDll_XnpConfig);
++REX_EXPORT_NOOP(__imp__NetDll_XnpConfigUPnP);
+ REX_EXPORT_STUB(__imp__NetDll_XnpConfigUPnPPortAndExternalAddr);
+-REX_EXPORT_STUB(__imp__NetDll_XnpEthernetInterceptRecv);
+-REX_EXPORT_STUB(__imp__NetDll_XnpEthernetInterceptSetCallbacks);
++REX_EXPORT_NOOP(__imp__NetDll_XnpEthernetInterceptRecv);
++REX_EXPORT_NOOP(__imp__NetDll_XnpEthernetInterceptSetCallbacks);
+ REX_EXPORT_STUB(__imp__NetDll_XnpEthernetInterceptSetExtendedReceiveCallback);
+-REX_EXPORT_STUB(__imp__NetDll_XnpEthernetInterceptXmit);
++REX_EXPORT_NOOP(__imp__NetDll_XnpEthernetInterceptXmit);
+ REX_EXPORT_STUB(__imp__NetDll_XnpEthernetInterceptXmitAsIp);
+-REX_EXPORT_STUB(__imp__NetDll_XnpGetActiveSocketList);
+-REX_EXPORT_STUB(__imp__NetDll_XnpGetConfigStatus);
++REX_EXPORT_NOOP(__imp__NetDll_XnpGetActiveSocketList);
++REX_EXPORT_NOOP(__imp__NetDll_XnpGetConfigStatus);
+ REX_EXPORT_STUB(__imp__NetDll_XnpGetKeyList);
+ REX_EXPORT_STUB(__imp__NetDll_XnpGetQosLookupList);
+ REX_EXPORT_STUB(__imp__NetDll_XnpGetSecAssocList);
+-REX_EXPORT_STUB(__imp__NetDll_XnpGetVlanXboxName);
+-REX_EXPORT_STUB(__imp__NetDll_XnpLoadConfigParams);
+-REX_EXPORT_STUB(__imp__NetDll_XnpLoadMachineAccount);
++REX_EXPORT_NOOP(__imp__NetDll_XnpGetVlanXboxName);
++REX_EXPORT_NOOP(__imp__NetDll_XnpLoadConfigParams);
++REX_EXPORT_NOOP(__imp__NetDll_XnpLoadMachineAccount);
+ REX_EXPORT_STUB(__imp__NetDll_XnpLogonClearChallenge);
+-REX_EXPORT_STUB(__imp__NetDll_XnpLogonClearQEvent);
++REX_EXPORT_NOOP(__imp__NetDll_XnpLogonClearQEvent);
+ REX_EXPORT_STUB(__imp__NetDll_XnpLogonGetChallenge);
+-REX_EXPORT_STUB(__imp__NetDll_XnpLogonGetQFlags);
+-REX_EXPORT_STUB(__imp__NetDll_XnpLogonGetQVals);
+-REX_EXPORT_STUB(__imp__NetDll_XnpLogonGetStatus);
++REX_EXPORT_NOOP(__imp__NetDll_XnpLogonGetQFlags);
++REX_EXPORT_NOOP(__imp__NetDll_XnpLogonGetQVals);
++REX_EXPORT_NOOP(__imp__NetDll_XnpLogonGetStatus);
+ REX_EXPORT_STUB(__imp__NetDll_XnpLogonSetChallengeResponse);
+-REX_EXPORT_STUB(__imp__NetDll_XnpLogonSetPState);
+-REX_EXPORT_STUB(__imp__NetDll_XnpLogonSetQEvent);
+-REX_EXPORT_STUB(__imp__NetDll_XnpLogonSetQFlags);
+-REX_EXPORT_STUB(__imp__NetDll_XnpLogonSetQVals);
+-REX_EXPORT_STUB(__imp__NetDll_XnpNoteSystemTime);
++REX_EXPORT_NOOP(__imp__NetDll_XnpLogonSetPState);
++REX_EXPORT_NOOP(__imp__NetDll_XnpLogonSetQEvent);
++REX_EXPORT_NOOP(__imp__NetDll_XnpLogonSetQFlags);
++REX_EXPORT_NOOP(__imp__NetDll_XnpLogonSetQVals);
++REX_EXPORT_NOOP(__imp__NetDll_XnpNoteSystemTime);
+ REX_EXPORT_STUB(__imp__NetDll_XnpPersistTitleState);
+ REX_EXPORT_STUB(__imp__NetDll_XnpQosHistoryGetAggregateMeasurement);
+ REX_EXPORT_STUB(__imp__NetDll_XnpQosHistoryGetEntries);
+ REX_EXPORT_STUB(__imp__NetDll_XnpQosHistoryLoad);
+ REX_EXPORT_STUB(__imp__NetDll_XnpQosHistorySaveMeasurements);
+-REX_EXPORT_STUB(__imp__NetDll_XnpRegisterKeyForCallerType);
++REX_EXPORT_NOOP(__imp__NetDll_XnpRegisterKeyForCallerType);
+ REX_EXPORT_STUB(__imp__NetDll_XnpReplaceKeyForCallerType);
+-REX_EXPORT_STUB(__imp__NetDll_XnpSaveConfigParams);
+-REX_EXPORT_STUB(__imp__NetDll_XnpSaveMachineAccount);
+-REX_EXPORT_STUB(__imp__NetDll_XnpSetVlanXboxName);
++REX_EXPORT_NOOP(__imp__NetDll_XnpSaveConfigParams);
++REX_EXPORT_NOOP(__imp__NetDll_XnpSaveMachineAccount);
++REX_EXPORT_NOOP(__imp__NetDll_XnpSetVlanXboxName);
+ REX_EXPORT_STUB(__imp__NetDll_XnpToolIpProxyInject);
+ REX_EXPORT_STUB(__imp__NetDll_XnpToolSetCallbacks);
+-REX_EXPORT_STUB(__imp__NetDll_XnpUnregisterKeyForCallerType);
++REX_EXPORT_NOOP(__imp__NetDll_XnpUnregisterKeyForCallerType);
+ REX_EXPORT_STUB(__imp__NetDll_XnpUpdateConfigParams);
+-REX_EXPORT_STUB(__imp__NetDll_getpeername);
+-REX_EXPORT_STUB(__imp__NetDll_getsockname);
+-REX_EXPORT_STUB(__imp__NetDll_getsockopt);
++REX_EXPORT_NOOP(__imp__NetDll_getpeername);
++REX_EXPORT_NOOP(__imp__NetDll_getsockname);
++REX_EXPORT_NOOP(__imp__NetDll_getsockopt);
+diff --git a/src/kernel/xam/xam_ui.cpp b/src/kernel/xam/xam_ui.cpp
+index 5a572ce4..f581d44c 100644
+--- a/src/kernel/xam/xam_ui.cpp
++++ b/src/kernel/xam/xam_ui.cpp
+@@ -583,7 +583,7 @@ REX_EXPORT_STUB(__imp__XamNavigate);
+ REX_EXPORT_STUB(__imp__XamNavigateBack);
+ REX_EXPORT_STUB(__imp__XamOverrideHudOpenType);
+ REX_EXPORT_STUB(__imp__XamShowAchievementDetailsUI);
+-REX_EXPORT_STUB(__imp__XamShowAchievementsUI);
++REX_EXPORT_NOOP(__imp__XamShowAchievementsUI);
+ REX_EXPORT_STUB(__imp__XamShowAchievementsUIEx);
+ REX_EXPORT_STUB(__imp__XamShowAndWaitForMessageBoxEx);
+ REX_EXPORT_STUB(__imp__XamShowAvatarAwardGamesUI);
+@@ -608,13 +608,13 @@ REX_EXPORT_STUB(__imp__XamShowFitnessWarnAboutPrivacyUI);
+ REX_EXPORT_STUB(__imp__XamShowFitnessWarnAboutTimeUI);
+ REX_EXPORT_STUB(__imp__XamShowFofUI);
+ REX_EXPORT_STUB(__imp__XamShowForcedNameChangeUI);
+-REX_EXPORT_STUB(__imp__XamShowFriendRequestUI);
+-REX_EXPORT_STUB(__imp__XamShowFriendsUI);
++REX_EXPORT_NOOP(__imp__XamShowFriendRequestUI);
++REX_EXPORT_NOOP(__imp__XamShowFriendsUI);
+ REX_EXPORT_STUB(__imp__XamShowFriendsUIp);
+-REX_EXPORT_STUB(__imp__XamShowGameInviteUI);
++REX_EXPORT_NOOP(__imp__XamShowGameInviteUI);
+ REX_EXPORT_STUB(__imp__XamShowGameVoiceChannelUI);
+ REX_EXPORT_STUB(__imp__XamShowGamerCardUI);
+-REX_EXPORT_STUB(__imp__XamShowGamerCardUIForXUID);
++REX_EXPORT_NOOP(__imp__XamShowGamerCardUIForXUID);
+ REX_EXPORT_STUB(__imp__XamShowGamerCardUIForXUIDp);
+ REX_EXPORT_STUB(__imp__XamShowGamesUI);
+ REX_EXPORT_STUB(__imp__XamShowGenericOnlineAppUI);
+@@ -632,11 +632,11 @@ REX_EXPORT_STUB(__imp__XamShowMarketplaceDownloadItemsUI);
+ REX_EXPORT_STUB(__imp__XamShowMarketplaceGetOrderReceipts);
+ REX_EXPORT_STUB(__imp__XamShowMarketplacePurchaseOrderUI);
+ REX_EXPORT_STUB(__imp__XamShowMarketplacePurchaseOrderUIEx);
+-REX_EXPORT_STUB(__imp__XamShowMarketplaceUI);
++REX_EXPORT_NOOP(__imp__XamShowMarketplaceUI);
+ REX_EXPORT_STUB(__imp__XamShowMarketplaceUIEx);
+ REX_EXPORT_STUB(__imp__XamShowMessageBox);
+-REX_EXPORT_STUB(__imp__XamShowMessageComposeUI);
+-REX_EXPORT_STUB(__imp__XamShowMessagesUI);
++REX_EXPORT_NOOP(__imp__XamShowMessageComposeUI);
++REX_EXPORT_NOOP(__imp__XamShowMessagesUI);
+ REX_EXPORT_STUB(__imp__XamShowMessagesUIEx);
+ REX_EXPORT_STUB(__imp__XamShowMessengerUI);
+ REX_EXPORT_STUB(__imp__XamShowMultiplayerUpgradeUI);
+@@ -671,17 +671,17 @@ REX_EXPORT_STUB(__imp__XamShowPasscodeVerifyUI);
+ REX_EXPORT_STUB(__imp__XamShowPasscodeVerifyUIEx);
+ REX_EXPORT_STUB(__imp__XamShowPaymentOptionsUI);
+ REX_EXPORT_STUB(__imp__XamShowPersonalizationUI);
+-REX_EXPORT_STUB(__imp__XamShowPlayerReviewUI);
+-REX_EXPORT_STUB(__imp__XamShowPlayersUI);
++REX_EXPORT_NOOP(__imp__XamShowPlayerReviewUI);
++REX_EXPORT_NOOP(__imp__XamShowPlayersUI);
+ REX_EXPORT_STUB(__imp__XamShowPrivateChatInviteUI);
+-REX_EXPORT_STUB(__imp__XamShowQuickChatUI);
++REX_EXPORT_NOOP(__imp__XamShowQuickChatUI);
+ REX_EXPORT_STUB(__imp__XamShowQuickChatUIp);
+ REX_EXPORT_STUB(__imp__XamShowQuickLaunchUI);
+ REX_EXPORT_STUB(__imp__XamShowRecentMessageUI);
+ REX_EXPORT_STUB(__imp__XamShowRecentMessageUIEx);
+ REX_EXPORT_STUB(__imp__XamShowReputationUI);
+ REX_EXPORT_STUB(__imp__XamShowSigninUIEx);
+-REX_EXPORT_STUB(__imp__XamShowSigninUIp);
++REX_EXPORT_NOOP(__imp__XamShowSigninUIp);
+ REX_EXPORT_STUB(__imp__XamShowSignupCreditCardUI);
+ REX_EXPORT_STUB(__imp__XamShowSocialPostUI);
+ REX_EXPORT_STUB(__imp__XamShowStorePickerUI);
+@@ -690,7 +690,7 @@ REX_EXPORT_STUB(__imp__XamShowTermsOfUseUI);
+ REX_EXPORT_STUB(__imp__XamShowUpdaterUI);
+ REX_EXPORT_STUB(__imp__XamShowVideoChatInviteUI);
+ REX_EXPORT_STUB(__imp__XamShowVideoRichPresenceUI);
+-REX_EXPORT_STUB(__imp__XamShowVoiceMailUI);
++REX_EXPORT_NOOP(__imp__XamShowVoiceMailUI);
+ REX_EXPORT_STUB(__imp__XamShowVoiceSettingsUI);
+ REX_EXPORT_STUB(__imp__XamShowWhatsOnUI);
+ REX_EXPORT_STUB(__imp__XamShowWordRegisterUI);
+diff --git a/src/kernel/xam/xam_user.cpp b/src/kernel/xam/xam_user.cpp
+index 8778066e..5404dcf7 100644
+--- a/src/kernel/xam/xam_user.cpp
++++ b/src/kernel/xam/xam_user.cpp
+@@ -761,7 +761,7 @@ REX_EXPORT_STUB(__imp__XamUserAddRecentPlayer);
+ REX_EXPORT_STUB(__imp__XamUserAllowedToPostToSocialNetwork);
+ REX_EXPORT_STUB(__imp__XamUserCreateAvatarAssetEnumerator);
+ REX_EXPORT_STUB(__imp__XamUserCreatePlayerEnumerator);
+-REX_EXPORT_STUB(__imp__XamUserCreateStatsEnumerator);
++REX_EXPORT_NOOP(__imp__XamUserCreateStatsEnumerator);
+ REX_EXPORT_STUB(__imp__XamUserCreateTitlesPlayedEnumerator);
+ REX_EXPORT_STUB(__imp__XamUserFlushLogonQueue);
+ REX_EXPORT_STUB(__imp__XamUserGetAge);
+@@ -769,8 +769,8 @@ REX_EXPORT_STUB(__imp__XamUserGetAgeGroup);
+ REX_EXPORT_STUB(__imp__XamUserGetCachedUserFlags);
+ REX_EXPORT_STUB(__imp__XamUserGetDeviceId);
+ REX_EXPORT_STUB(__imp__XamUserGetIndexFromXUID);
+-REX_EXPORT_STUB(__imp__XamUserGetMembershipTierFromXUID);
+-REX_EXPORT_STUB(__imp__XamUserGetOnlineCountryFromXUID);
++REX_EXPORT_NOOP(__imp__XamUserGetMembershipTierFromXUID);
++REX_EXPORT_NOOP(__imp__XamUserGetOnlineCountryFromXUID);
+ REX_EXPORT_STUB(__imp__XamUserGetOnlineLanguageFromXUID);
+ REX_EXPORT_STUB(__imp__XamUserGetOnlineXUIDFromOfflineXUID);
+ REX_EXPORT_STUB(__imp__XamUserGetReportingInfo);
 diff --git a/src/kernel/xam/xam_voice.cpp b/src/kernel/xam/xam_voice.cpp
-index e48d6ce8..4115ab4f 100644
+index e48d6ce8..d15a4e3e 100644
 --- a/src/kernel/xam/xam_voice.cpp
 +++ b/src/kernel/xam/xam_voice.cpp
 @@ -44,6 +44,12 @@ u32 XamVoiceHeadsetPresent_entry(mapped_void voice_ptr) {
@@ -32,10 +357,35 @@ index e48d6ce8..4115ab4f 100644
  REX_EXPORT_STUB(__imp__XamVoiceSetAudioCaptureRoutine);
  REX_EXPORT_STUB(__imp__XamVoiceSetMicArrayBeamAngle);
 -REX_EXPORT_STUB(__imp__XamVoiceSetMicArrayIdleUsers);
+-REX_EXPORT_STUB(__imp__XamVoiceSubmitPacket);
 +REX_EXPORT(__imp__XamVoiceSetMicArrayIdleUsers, rex::kernel::xam::XamVoiceSetMicArrayIdleUsers_entry)
- REX_EXPORT_STUB(__imp__XamVoiceSubmitPacket);
++REX_EXPORT_NOOP(__imp__XamVoiceSubmitPacket);
+diff --git a/src/kernel/xboxkrnl/xboxkrnl_audio.cpp b/src/kernel/xboxkrnl/xboxkrnl_audio.cpp
+index 86e7888c..8b4c17fd 100644
+--- a/src/kernel/xboxkrnl/xboxkrnl_audio.cpp
++++ b/src/kernel/xboxkrnl/xboxkrnl_audio.cpp
+@@ -137,14 +137,14 @@ REX_EXPORT_STUB(__imp__XAudioCaptureRenderDriverFrame);
+ REX_EXPORT_STUB(__imp__XAudioGetRenderDriverTic);
+ REX_EXPORT_STUB(__imp__XAudioSetDuckerLevel);
+ REX_EXPORT_STUB(__imp__XAudioIsDuckerEnabled);
+-REX_EXPORT_STUB(__imp__XAudioGetDuckerLevel);
+-REX_EXPORT_STUB(__imp__XAudioGetDuckerThreshold);
++REX_EXPORT_NOOP(__imp__XAudioGetDuckerLevel);
++REX_EXPORT_NOOP(__imp__XAudioGetDuckerThreshold);
+ REX_EXPORT_STUB(__imp__XAudioSetDuckerThreshold);
+-REX_EXPORT_STUB(__imp__XAudioGetDuckerAttackTime);
++REX_EXPORT_NOOP(__imp__XAudioGetDuckerAttackTime);
+ REX_EXPORT_STUB(__imp__XAudioSetDuckerAttackTime);
+-REX_EXPORT_STUB(__imp__XAudioGetDuckerReleaseTime);
++REX_EXPORT_NOOP(__imp__XAudioGetDuckerReleaseTime);
+ REX_EXPORT_STUB(__imp__XAudioSetDuckerReleaseTime);
+-REX_EXPORT_STUB(__imp__XAudioGetDuckerHoldTime);
++REX_EXPORT_NOOP(__imp__XAudioGetDuckerHoldTime);
+ REX_EXPORT_STUB(__imp__XAudioSetDuckerHoldTime);
+ REX_EXPORT_STUB(__imp__XAudioGetUnderrunCount);
+ REX_EXPORT_STUB(__imp__XAudioSetProcessFrameCallback);
 diff --git a/src/kernel/xboxkrnl/xboxkrnl_io.cpp b/src/kernel/xboxkrnl/xboxkrnl_io.cpp
-index 3f1a8520..f571eb0c 100644
+index 3f1a8520..1ecfd947 100644
 --- a/src/kernel/xboxkrnl/xboxkrnl_io.cpp
 +++ b/src/kernel/xboxkrnl/xboxkrnl_io.cpp
 @@ -728,13 +728,20 @@ u32 IoCreateDevice_entry(u32 device_struct, u32 r4, u32 r5, u32 r6, u32 r7, mapp
@@ -61,15 +411,42 @@ index 3f1a8520..f571eb0c 100644
    return X_STATUS_SUCCESS;
  }
  
-@@ -795,7 +802,7 @@ REX_EXPORT_STUB(__imp__IoCheckShareAccess);
- REX_EXPORT_STUB(__imp__IoCompleteRequest);
+@@ -791,26 +798,26 @@ REX_EXPORT_STUB(__imp__IoBuildAsynchronousFsdRequest);
+ REX_EXPORT_STUB(__imp__IoBuildDeviceIoControlRequest);
+ REX_EXPORT_STUB(__imp__IoBuildSynchronousFsdRequest);
+ REX_EXPORT_STUB(__imp__IoCallDriver);
+-REX_EXPORT_STUB(__imp__IoCheckShareAccess);
+-REX_EXPORT_STUB(__imp__IoCompleteRequest);
++REX_EXPORT_NOOP(__imp__IoCheckShareAccess);
++REX_EXPORT_NOOP(__imp__IoCompleteRequest);
  REX_EXPORT_STUB(__imp__IoCreateFile);
- REX_EXPORT_STUB(__imp__IoDeleteDevice);
+-REX_EXPORT_STUB(__imp__IoDeleteDevice);
 -REX_EXPORT_STUB(__imp__IoDismountVolume);
++REX_EXPORT_NOOP(__imp__IoDeleteDevice);
 +REX_EXPORT(__imp__IoDismountVolume, rex::kernel::xboxkrnl::IoDismountVolume_entry)
  REX_EXPORT_STUB(__imp__IoFreeIrp);
  REX_EXPORT_STUB(__imp__IoInitializeIrp);
- REX_EXPORT_STUB(__imp__IoInvalidDeviceRequest);
+-REX_EXPORT_STUB(__imp__IoInvalidDeviceRequest);
++REX_EXPORT_NOOP(__imp__IoInvalidDeviceRequest);
+ REX_EXPORT_STUB(__imp__IoQueueThreadIrp);
+ REX_EXPORT_STUB(__imp__IoReleaseDeviceObjectLock);
+-REX_EXPORT_STUB(__imp__IoRemoveShareAccess);
++REX_EXPORT_NOOP(__imp__IoRemoveShareAccess);
+ REX_EXPORT_STUB(__imp__IoSetIoCompletion);
+-REX_EXPORT_STUB(__imp__IoSetShareAccess);
++REX_EXPORT_NOOP(__imp__IoSetShareAccess);
+ REX_EXPORT_STUB(__imp__IoStartNextPacket);
+ REX_EXPORT_STUB(__imp__IoStartNextPacketByKey);
+ REX_EXPORT_STUB(__imp__IoStartPacket);
+ REX_EXPORT_STUB(__imp__IoSynchronousFsdRequest);
+ REX_EXPORT_STUB(__imp__NtDeleteFile);
+-REX_EXPORT_STUB(__imp__NtSetSystemTime);
+-REX_EXPORT_STUB(__imp__NtWriteFileGather);
++REX_EXPORT_NOOP(__imp__NtSetSystemTime);
++REX_EXPORT_NOOP(__imp__NtWriteFileGather);
+ REX_EXPORT_STUB(__imp__IoAcquireCancelSpinLock);
+ REX_EXPORT_STUB(__imp__IoReleaseCancelSpinLock);
+ REX_EXPORT_STUB(__imp__NtCancelIoFile);
 diff --git a/src/kernel/xboxkrnl/xboxkrnl_io_info.cpp b/src/kernel/xboxkrnl/xboxkrnl_io_info.cpp
 index bd5de655..5eea1b85 100644
 --- a/src/kernel/xboxkrnl/xboxkrnl_io_info.cpp
@@ -83,8 +460,43 @@ index bd5de655..5eea1b85 100644
        info->device_type = FILE_DEVICE_UNKNOWN;
        info->characteristics = 0;
        out_length = sizeof(X_FILE_FS_DEVICE_INFORMATION);
+diff --git a/src/kernel/xboxkrnl/xboxkrnl_misc.cpp b/src/kernel/xboxkrnl/xboxkrnl_misc.cpp
+index 58b6000f..5813bcf1 100644
+--- a/src/kernel/xboxkrnl/xboxkrnl_misc.cpp
++++ b/src/kernel/xboxkrnl/xboxkrnl_misc.cpp
+@@ -91,7 +91,7 @@ REX_EXPORT_STUB(__imp__IptvSetBoundaryKey);
+ REX_EXPORT_STUB(__imp__IptvSetSessionKey);
+ REX_EXPORT_STUB(__imp__IptvVerifyOmac1Signature);
+ REX_EXPORT_STUB(__imp__McaDeviceRequest);
+-REX_EXPORT_STUB(__imp__MicDeviceRequest);
++REX_EXPORT_NOOP(__imp__MicDeviceRequest);
+ REX_EXPORT_STUB(__imp__MtpdBeginTransaction);
+ REX_EXPORT_STUB(__imp__MtpdCancelTransaction);
+ REX_EXPORT_STUB(__imp__MtpdEndTransaction);
+@@ -119,7 +119,7 @@ REX_EXPORT_STUB(__imp__NomnilSetLed);
+ REX_EXPORT_STUB(__imp__NomnilStartCloseDevice);
+ REX_EXPORT_STUB(__imp__NullCableRequest);
+ REX_EXPORT_STUB(__imp__PsCamDeviceRequest);
+-REX_EXPORT_STUB(__imp__RmcDeviceRequest);
++REX_EXPORT_NOOP(__imp__RmcDeviceRequest);
+ REX_EXPORT_STUB(__imp__TidDeviceRequest);
+ REX_EXPORT_STUB(__imp__TitleDeviceAuthRequest);
+ REX_EXPORT_STUB(__imp__UsbdAddDeviceComplete);
+diff --git a/src/kernel/xboxkrnl/xboxkrnl_modules.cpp b/src/kernel/xboxkrnl/xboxkrnl_modules.cpp
+index dcd2001b..0056cc4a 100644
+--- a/src/kernel/xboxkrnl/xboxkrnl_modules.cpp
++++ b/src/kernel/xboxkrnl/xboxkrnl_modules.cpp
+@@ -233,7 +233,7 @@ REX_EXPORT_STUB(__imp__XexPcToFileHeader);
+ REX_EXPORT_STUB(__imp__XexRegisterPatchDescriptor);
+ REX_EXPORT_STUB(__imp__XexSendDeferredNotifications);
+ REX_EXPORT_STUB(__imp__XexStartExecutable);
+-REX_EXPORT_STUB(__imp__XexUnloadImageAndExitThread);
++REX_EXPORT_NOOP(__imp__XexUnloadImageAndExitThread);
+ REX_EXPORT_STUB(__imp__XexUnloadTitleModules);
+ REX_EXPORT_STUB(__imp__XexVerifyImageHeaders);
+ REX_EXPORT_STUB(__imp__XexGetModuleImportVersions);
 diff --git a/src/kernel/xboxkrnl/xboxkrnl_ob.cpp b/src/kernel/xboxkrnl/xboxkrnl_ob.cpp
-index 5709e6d0..0e2777b0 100644
+index 5709e6d0..b19d7758 100644
 --- a/src/kernel/xboxkrnl/xboxkrnl_ob.cpp
 +++ b/src/kernel/xboxkrnl/xboxkrnl_ob.cpp
 @@ -154,6 +154,22 @@ u32 ObReferenceObjectByName_entry(mapped_string name, u32 attributes, u32 object
@@ -110,8 +522,12 @@ index 5709e6d0..0e2777b0 100644
  u32 ObDereferenceObject_entry(u32 native_ptr) {
    REXKRNL_IMPORT_TRACE("ObDereferenceObject", "ptr={:#x}", (uint32_t)native_ptr);
    // Check if a dummy value from ObReferenceObjectByHandle.
-@@ -262,7 +278,7 @@ REX_EXPORT_STUB(__imp__ObInsertObject);
- REX_EXPORT_STUB(__imp__ObIsTitleObject);
+@@ -259,10 +275,10 @@ REX_EXPORT(__imp__NtQueryEvent, rex::kernel::xboxkrnl::NtQueryEvent_entry)
+ REX_EXPORT_STUB(__imp__ObCreateObject);
+ REX_EXPORT_STUB(__imp__ObGetWaitableObject);
+ REX_EXPORT_STUB(__imp__ObInsertObject);
+-REX_EXPORT_STUB(__imp__ObIsTitleObject);
++REX_EXPORT_NOOP(__imp__ObIsTitleObject);
  REX_EXPORT_STUB(__imp__ObLookupAnyThreadByThreadId);
  REX_EXPORT_STUB(__imp__ObMakeTemporaryObject);
 -REX_EXPORT_STUB(__imp__ObReferenceObject);
@@ -119,6 +535,41 @@ index 5709e6d0..0e2777b0 100644
  REX_EXPORT_STUB(__imp__ObTranslateSymbolicLink);
  REX_EXPORT_STUB(__imp__NtCreateDirectoryObject);
  REX_EXPORT_STUB(__imp__NtCreateSymbolicLinkObject);
+diff --git a/src/kernel/xboxkrnl/xboxkrnl_rtl.cpp b/src/kernel/xboxkrnl/xboxkrnl_rtl.cpp
+index 8b862fc7..be162b37 100644
+--- a/src/kernel/xboxkrnl/xboxkrnl_rtl.cpp
++++ b/src/kernel/xboxkrnl/xboxkrnl_rtl.cpp
+@@ -586,7 +586,7 @@ REX_EXPORT_STUB(__imp__RtlUnicodeToMultiByteSize);
+ REX_EXPORT_STUB(__imp__RtlUnicodeToUtf8);
+ REX_EXPORT_STUB(__imp__RtlUnicodeToUtf8Size);
+ REX_EXPORT_STUB(__imp__RtlUnwind2);
+-REX_EXPORT_STUB(__imp__RtlUpcaseUnicodeChar);
++REX_EXPORT_NOOP(__imp__RtlUpcaseUnicodeChar);
+ REX_EXPORT_STUB(__imp__RtlVirtualUnwind);
+ REX_EXPORT_STUB(__imp__RtlImageDirectoryEntryToData);
+ REX_EXPORT_STUB(__imp__RtlCaptureStackBackTrace);
+diff --git a/src/kernel/xboxkrnl/xboxkrnl_video.cpp b/src/kernel/xboxkrnl/xboxkrnl_video.cpp
+index 1254710a..c6a6ab9d 100644
+--- a/src/kernel/xboxkrnl/xboxkrnl_video.cpp
++++ b/src/kernel/xboxkrnl/xboxkrnl_video.cpp
+@@ -96,7 +96,7 @@ REX_EXPORT_STUB(__imp__VdGenerateGPUCSCCoefficients);
+ REX_EXPORT_STUB(__imp__VdGetClosedCaptionReadyStatus);
+ REX_EXPORT_STUB(__imp__VdGetDisplayModeOverride);
+ REX_EXPORT_STUB(__imp__VdInitializeScaler);
+-REX_EXPORT_STUB(__imp__VdQuerySystemCommandBuffer);
++REX_EXPORT_NOOP(__imp__VdQuerySystemCommandBuffer);
+ REX_EXPORT_STUB(__imp__VdReadDVERegisterUlong);
+ REX_EXPORT_STUB(__imp__VdReadWriteHSIOCalibrationFlag);
+ REX_EXPORT_STUB(__imp__VdRegisterGraphicsNotification);
+@@ -107,7 +107,7 @@ REX_EXPORT_STUB(__imp__VdSetColorProfileAdjustment);
+ REX_EXPORT_STUB(__imp__VdSetCscMatricesOverride);
+ REX_EXPORT_STUB(__imp__VdSetHDCPOption);
+ REX_EXPORT_STUB(__imp__VdSetMacrovisionOption);
+-REX_EXPORT_STUB(__imp__VdSetSystemCommandBuffer);
++REX_EXPORT_NOOP(__imp__VdSetSystemCommandBuffer);
+ REX_EXPORT_STUB(__imp__VdSetWSSData);
+ REX_EXPORT_STUB(__imp__VdSetWSSOption);
+ REX_EXPORT_STUB(__imp__VdTurnDisplayOff);
 diff --git a/thirdparty/CMakeLists.txt b/thirdparty/CMakeLists.txt
 index f102b56a..01484d98 100644
 --- a/thirdparty/CMakeLists.txt
