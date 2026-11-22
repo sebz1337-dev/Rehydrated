@@ -1,0 +1,9 @@
+# Guest functions at hook addresses, named from the hook descriptions in config/hooks/*.toml.
+[functions]
+0x829781A4 = { name = "Hook_LootCreateItem_IsItemQualityLevelDropUnidentified" }
+0x828D49C8 = { name = "Hook_PostXServerReadUpdate" }
+0x829B8580 = { name = "Hook_XServerReadUpdate_OnJoined" }
+0x827ECB60 = { name = "Hook_PostNetworkInitializeForApp" }
+0x82737164 = { name = "Hook_PostFastAttribInitializeForApp" }
+0x823C1AB4 = { name = "Hook_UI_InitializeForGame_RestoreDesignerMenu" }
+0x824FB79C = { name = "Hook_UIMainMenu_Console_OnUpdate" }

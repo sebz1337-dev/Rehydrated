@@ -1,0 +1,34 @@
+# Names for hook/import callees derived from their call graph in generated C++.
+[functions]
+0x82339E58 = { name = "FlagCounter_82339E58" }
+0x8233F9D0 = { name = "ThreadLocalStorage_Get_8233F9D0" }
+0x8238A128 = { name = "HookArgHelper_8238A128" }
+0x823BDD00 = { name = "UI_ControlFromID_Get_823BDD00" }
+0x823BDE90 = { name = "UI_ControlID_Test_823BDE90" }
+0x823BDEF0 = { name = "UI_ControlID_Set_823BDEF0" }
+0x823BDF68 = { name = "UI_ControlID_SetEx_823BDF68" }
+0x823BE050 = { name = "UI_ControlID_Init_823BE050" }
+0x823BE530 = { name = "UI_ControlCreate_823BE530" }
+0x823BF258 = { name = "UI_ControlCreateEx_823BF258" }
+0x823C0168 = { name = "UI_ControlCreateFromID_823C0168" }
+0x823C0240 = { name = "HookArgHelper_823C0240" }
+0x823C8388 = { name = "HookArgHelper_823C8388" }
+0x824BEB40 = { name = "UI_PrimaryControllerCheck_824BEB40" }
+0x825A1C18 = { name = "Alloc_Wrapper_825A1C18" }
+0x825B8318 = { name = "HookArgHelper_825B8318" }
+0x8270BDE0 = { name = "HookArgHelper_8270BDE0" }
+0x8270DDB8 = { name = "HookArgHelper_8270DDB8" }
+0x8270DE70 = { name = "HookArgHelper_8270DE70" }
+0x82711528 = { name = "ItemLabelCheck_82711528" }
+0x82793698 = { name = "HookArgHelper_82793698" }
+0x82796080 = { name = "HookArgHelper_82796080" }
+0x82796240 = { name = "HookArgHelper_82796240" }
+0x828D4F30 = { name = "ThreadLocalStorage_Get_828D4F30" }
+0x82973780 = { name = "ItemLabelGlobalCheck_82973780" }
+0x82974098 = { name = "ItemHelper_82974098" }
+0x82974560 = { name = "ItemHelper_82974560" }
+0x82974968 = { name = "SGameGlobalsGet_Wrapper_82974968" }
+0x82975700 = { name = "SItemGenerate_Wrapper_82975700" }
+0x82976BF0 = { name = "ItemHelper_82976BF0" }
+0x82976CC0 = { name = "ItemHelper_82976CC0" }
+0x82A84E30 = { name = "HookArgHelper_82A84E30" }

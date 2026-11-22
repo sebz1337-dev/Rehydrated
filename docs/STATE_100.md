@@ -6,9 +6,14 @@ All numbers measured from the current worktree, not recalled.
 > **UPDATE (owner-authorized redefinition):** the literal function-coverage
 > target (~110,400 semantic names) is **retired**. The new criterion is:
 > every hook target, guest import, and their direct callees has a semantic
-> name. Measured 2026-11-22: **443 target functions** (26 hooks + 364
-> guest imports + 53 direct callees), of which **34 are already named** and
-> **409 remain**. Target list: `E:\dev\d3\coverage_targets.txt`.
+> name. Guest imports are already named `__imp__X` by the SDK registry, so
+> they are excluded from the config target set. Measured 2026-11-22:
+> **74 hook/callee targets**, of which 34 were already named; 8 hook-target
+> names and 32 call-graph-derived names were added. `0x823C04A8` is a
+> mid-function hook address that cannot be a function start (naming it
+> breaks branch validation), so it is excluded with reason. **Final:
+> 73/73 targets named**, config names 3,907 → 3,947. Target list:
+> `E:\dev\d3\coverage_targets.txt`.
 
 ---
 
