@@ -3,6 +3,13 @@
 **Date:** 2026-11-22 · **Repo:** `E:\dev\d3\Rehydrated` · **Scope:** decomp-only; PC proxy out of scope.
 All numbers measured from the current worktree, not recalled.
 
+> **UPDATE (owner-authorized redefinition):** the literal function-coverage
+> target (~110,400 semantic names) is **retired**. The new criterion is:
+> every hook target, guest import, and their direct callees has a semantic
+> name. Measured 2026-11-22: **443 target functions** (26 hooks + 364
+> guest imports + 53 direct callees), of which **34 are already named** and
+> **409 remain**. Target list: `E:\dev\d3\coverage_targets.txt`.
+
 ---
 
 ## 1. Function coverage — NOT 100%
