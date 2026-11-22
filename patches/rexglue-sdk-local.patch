@@ -1,0 +1,134 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9b3cdf56..9a4fb87f 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -187,6 +187,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/rex_pch.cmake)
+ 
+ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/rex_version.cmake)
+ rex_resolve_version(REXGLUE_FULL_VERSION
++    SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
+     FLOOR_MAJOR ${PROJECT_VERSION_MAJOR}
+     FLOOR_MINOR ${PROJECT_VERSION_MINOR})
+ 
+diff --git a/src/kernel/xam/xam_voice.cpp b/src/kernel/xam/xam_voice.cpp
+index e48d6ce8..4115ab4f 100644
+--- a/src/kernel/xam/xam_voice.cpp
++++ b/src/kernel/xam/xam_voice.cpp
+@@ -44,6 +44,12 @@ u32 XamVoiceHeadsetPresent_entry(mapped_void voice_ptr) {
+   return 0;
+ }
+ 
++u32 XamVoiceSetMicArrayIdleUsers_entry(u32 users) {
++  // Voice and the mic array are disabled in the recomp:
++  // XamVoiceIsActiveProcess always returns 0. Nothing to track here.
++  return 0;
++}
++
+ }  // namespace xam
+ }  // namespace kernel
+ }  // namespace rex
+@@ -66,5 +72,5 @@ REX_EXPORT_STUB(__imp__XamVoiceMuteMicArray);
+ REX_EXPORT_STUB(__imp__XamVoiceRecordUserPrivileges);
+ REX_EXPORT_STUB(__imp__XamVoiceSetAudioCaptureRoutine);
+ REX_EXPORT_STUB(__imp__XamVoiceSetMicArrayBeamAngle);
+-REX_EXPORT_STUB(__imp__XamVoiceSetMicArrayIdleUsers);
++REX_EXPORT(__imp__XamVoiceSetMicArrayIdleUsers, rex::kernel::xam::XamVoiceSetMicArrayIdleUsers_entry)
+ REX_EXPORT_STUB(__imp__XamVoiceSubmitPacket);
+diff --git a/src/kernel/xboxkrnl/xboxkrnl_io.cpp b/src/kernel/xboxkrnl/xboxkrnl_io.cpp
+index 3f1a8520..f571eb0c 100644
+--- a/src/kernel/xboxkrnl/xboxkrnl_io.cpp
++++ b/src/kernel/xboxkrnl/xboxkrnl_io.cpp
+@@ -728,13 +728,20 @@ u32 IoCreateDevice_entry(u32 device_struct, u32 r4, u32 r5, u32 r6, u32 r7, mapp
+   return X_STATUS_SUCCESS;
+ }
+ 
++// The VFS has no dismountable volumes: game_data_root is a host directory
++// mounted once at startup. All three dismount exports are therefore no-ops.
++u32 IoDismountVolume_entry(u32 handle) {
++  REXKRNL_IMPORT_TRACE("IoDismountVolume", "handle={:#x}", (uint32_t)handle);
++  return X_STATUS_SUCCESS;
++}
++
+ u32 IoDismountVolumeByFileHandle_entry(u32 handle) {
+-  REXKRNL_WARN("IoDismountVolumeByFileHandle({:#x}) - stub", (uint32_t)handle);
++  REXKRNL_IMPORT_TRACE("IoDismountVolumeByFileHandle", "handle={:#x}", (uint32_t)handle);
+   return X_STATUS_SUCCESS;
+ }
+ 
+ u32 IoDismountVolumeByName_entry(ppc_ptr_t<X_ANSI_STRING> name) {
+-  REXKRNL_WARN("IoDismountVolumeByName - stub");
++  REXKRNL_IMPORT_TRACE("IoDismountVolumeByName", "called");
+   return X_STATUS_SUCCESS;
+ }
+ 
+@@ -795,7 +802,7 @@ REX_EXPORT_STUB(__imp__IoCheckShareAccess);
+ REX_EXPORT_STUB(__imp__IoCompleteRequest);
+ REX_EXPORT_STUB(__imp__IoCreateFile);
+ REX_EXPORT_STUB(__imp__IoDeleteDevice);
+-REX_EXPORT_STUB(__imp__IoDismountVolume);
++REX_EXPORT(__imp__IoDismountVolume, rex::kernel::xboxkrnl::IoDismountVolume_entry)
+ REX_EXPORT_STUB(__imp__IoFreeIrp);
+ REX_EXPORT_STUB(__imp__IoInitializeIrp);
+ REX_EXPORT_STUB(__imp__IoInvalidDeviceRequest);
+diff --git a/src/kernel/xboxkrnl/xboxkrnl_io_info.cpp b/src/kernel/xboxkrnl/xboxkrnl_io_info.cpp
+index bd5de655..5eea1b85 100644
+--- a/src/kernel/xboxkrnl/xboxkrnl_io_info.cpp
++++ b/src/kernel/xboxkrnl/xboxkrnl_io_info.cpp
+@@ -431,7 +431,7 @@ u32 NtQueryVolumeInformationFile_entry(u32 file_handle,
+     }
+     case XFileFsDeviceInformation: {
+       auto info = info_ptr.as<X_FILE_FS_DEVICE_INFORMATION*>();
+-      REXKRNL_WARN("Stub XFileFsDeviceInformation!");
++      // Filled in below; the old warning was stale and mislabeled this case.
+       info->device_type = FILE_DEVICE_UNKNOWN;
+       info->characteristics = 0;
+       out_length = sizeof(X_FILE_FS_DEVICE_INFORMATION);
+diff --git a/src/kernel/xboxkrnl/xboxkrnl_ob.cpp b/src/kernel/xboxkrnl/xboxkrnl_ob.cpp
+index 5709e6d0..0e2777b0 100644
+--- a/src/kernel/xboxkrnl/xboxkrnl_ob.cpp
++++ b/src/kernel/xboxkrnl/xboxkrnl_ob.cpp
+@@ -154,6 +154,22 @@ u32 ObReferenceObjectByName_entry(mapped_string name, u32 attributes, u32 object
+   return result;
+ }
+ 
++u32 ObReferenceObject_entry(u32 native_ptr) {
++  // Mirror ObDereferenceObject: retain the matching native object when there is
++  // one. The dummy value handed out by ObReferenceObjectByHandle needs no work.
++  if (native_ptr == 0xDEADF00D) {
++    return native_ptr;
++  }
++
++  auto object = XObject::GetNativeObject<XObject>(
++      REX_KERNEL_STATE(), REX_KERNEL_MEMORY()->TranslateVirtual(native_ptr));
++  if (object) {
++    object->RetainHandle();
++  }
++
++  return native_ptr;
++}
++
+ u32 ObDereferenceObject_entry(u32 native_ptr) {
+   REXKRNL_IMPORT_TRACE("ObDereferenceObject", "ptr={:#x}", (uint32_t)native_ptr);
+   // Check if a dummy value from ObReferenceObjectByHandle.
+@@ -262,7 +278,7 @@ REX_EXPORT_STUB(__imp__ObInsertObject);
+ REX_EXPORT_STUB(__imp__ObIsTitleObject);
+ REX_EXPORT_STUB(__imp__ObLookupAnyThreadByThreadId);
+ REX_EXPORT_STUB(__imp__ObMakeTemporaryObject);
+-REX_EXPORT_STUB(__imp__ObReferenceObject);
++REX_EXPORT(__imp__ObReferenceObject, rex::kernel::xboxkrnl::ObReferenceObject_entry)
+ REX_EXPORT_STUB(__imp__ObTranslateSymbolicLink);
+ REX_EXPORT_STUB(__imp__NtCreateDirectoryObject);
+ REX_EXPORT_STUB(__imp__NtCreateSymbolicLinkObject);
+diff --git a/thirdparty/CMakeLists.txt b/thirdparty/CMakeLists.txt
+index f102b56a..01484d98 100644
+--- a/thirdparty/CMakeLists.txt
++++ b/thirdparty/CMakeLists.txt
+@@ -126,7 +126,7 @@ target_compile_options(aes128 PRIVATE -w)
+ 
+ # libmspack - LZX decompression (only lzxd.c needed for XEX decompression)
+ # Uses cabextract version which has all needed headers in one place
+-set(MSPACK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libmspack/cabextract/mspack")
++set(MSPACK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libmspack/libmspack/mspack")
+ add_library(mspack STATIC
+     ${MSPACK_DIR}/lzxd.c
+ )
