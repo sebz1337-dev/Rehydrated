@@ -52,6 +52,19 @@ struct DumpedString
     char text[];
 };
 
+struct SymbolicEntry
+{
+    be i32 value;
+    be u32 name;
+};
+
+struct SymbolTable
+{
+    be u32 address;
+    be u32 numEntries;
+    SymbolicEntry entries[numEntries];
+};
+
 struct TypeDescriptorDump
 {
     le u32 numPrimitiveDescriptors;
@@ -62,6 +75,9 @@ struct TypeDescriptorDump
 
     le u32 numStrings;
     DumpedString strings[numStrings];
+
+    le u32 numSymbolTables;
+    SymbolTable symbolTables[numSymbolTables];
 };
 
 TypeDescriptorDump dump @ 0x00;

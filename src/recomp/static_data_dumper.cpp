@@ -34,7 +34,8 @@ namespace
 {
 
 void DiscoverTypeDescriptors(be_ptr<XTypeDescriptor> typeDescPtr, GuestPtrSet<XTypeDescriptor>& primitiveDescriptors,
-    GuestPtrSet<ComplexTypeDescriptor>& complexDescriptors, GuestPtrSet<const char>& strings)
+    GuestPtrSet<ComplexTypeDescriptor>& complexDescriptors, GuestPtrSet<const char>& strings,
+    GuestPtrSet<SymbolicEntry>& symbolTables)
 {
     XTypeDescriptor* typeDesc = typeDescPtr.GetHost();
     if (!typeDesc)
@@ -65,10 +66,11 @@ void DiscoverTypeDescriptors(be_ptr<XTypeDescriptor> typeDescPtr, GuestPtrSet<XT
         if (field->szFieldName)
             strings.insert(field->szFieldName);
 
-        // TODO: dump SymbolicEntry            
+        if (field->pSymbolTable)
+            symbolTables.insert(field->pSymbolTable);
 
-        DiscoverTypeDescriptors(field->ptDataType, primitiveDescriptors, complexDescriptors, strings);
-        DiscoverTypeDescriptors(field->ptAuxDataType, primitiveDescriptors, complexDescriptors, strings);
+        DiscoverTypeDescriptors(field->ptDataType, primitiveDescriptors, complexDescriptors, strings, symbolTables);
+        DiscoverTypeDescriptors(field->ptAuxDataType, primitiveDescriptors, complexDescriptors, strings, symbolTables);
     }
 }
 
@@ -96,6 +98,7 @@ void StaticDataDumper::DumpTypeDescriptors(const char* fileName)
     GuestPtrSet<XTypeDescriptor> primitiveDescriptors{};
     GuestPtrSet<ComplexTypeDescriptor> complexDescriptors{};
     GuestPtrSet<const char> strings{};
+    GuestPtrSet<SymbolicEntry> symbolTables{};
 
     REXLOG_INFO("Discovering type descriptors...");
 
@@ -105,7 +108,7 @@ void StaticDataDumper::DumpTypeDescriptors(const char* fileName)
         be_ptr<XTypeDescriptor> castTypeDescPtr{};
         castTypeDescPtr.value = typeDescPtr.value;
 
-        DiscoverTypeDescriptors(castTypeDescPtr, primitiveDescriptors, complexDescriptors, strings);
+        DiscoverTypeDescriptors(castTypeDescPtr, primitiveDescriptors, complexDescriptors, strings, symbolTables);
 
         typeDescPtr = typeDescPtr.GetHost()->pNextRegisteredDescriptor;
     }
@@ -147,6 +150,38 @@ void StaticDataDumper::DumpTypeDescriptors(const char* fileName)
         }
     }
 
+    // Symbolic tables are arrays of { value, name } terminated by a null name
+    // or a -1 value. Resolve them before writing the string section so the
+    // name pointers are included there.
+    struct SymbolTableInfo
+    {
+        be_ptr<SymbolicEntry> ptr;
+        u32 numEntries;
+    };
+    constexpr u32 kMaxSymbolEntries = 8192;
+    std::vector<SymbolTableInfo> symbolTableInfos{};
+    symbolTableInfos.reserve(symbolTables.size());
+    for (auto& tablePtr : symbolTables)
+    {
+        SymbolicEntry* table = tablePtr.GetHost();
+        u32 numEntries = 0;
+        if (table)
+        {
+            while (numEntries < kMaxSymbolEntries)
+            {
+                SymbolicEntry& entry = table[numEntries];
+                if (!entry.sName || entry.nValue.get() == -1)
+                    break;
+
+                be_ptr<const char> namePtr{};
+                namePtr.value = entry.sName.value;
+                strings.insert(namePtr);
+                ++numEntries;
+            }
+        }
+        symbolTableInfos.push_back({ tablePtr, numEntries });
+    }
+
     int numStrings = strings.size();
     WriteToStream(file, &numStrings);
     for (auto& strPtr : strings)
@@ -158,6 +193,20 @@ void StaticDataDumper::DumpTypeDescriptors(const char* fileName)
             continue;
 
         WriteToStream(file, str, std::strlen(str) + 1);
+    }
+
+    int numSymbolTables = symbolTableInfos.size();
+    WriteToStream(file, &numSymbolTables);
+    for (auto& info : symbolTableInfos)
+    {
+        WriteToStream(file, &info.ptr.value);
+        WriteToStream(file, &info.numEntries);
+        if (info.numEntries)
+        {
+            SymbolicEntry* table = info.ptr.GetHost();
+            if (table)
+                WriteToStream(file, table, info.numEntries);
+        }
     }
 
     REXLOG_INFO("Finished dumping type descriptors");
