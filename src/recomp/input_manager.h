@@ -30,6 +30,8 @@ public:
     bool OnGuestInputUpdate();
 
     // WindowInputListener
+    void OnKeyDown(rex::ui::KeyEvent& e) override;
+    void OnKeyUp(rex::ui::KeyEvent& e) override;
     void OnMouseDown(rex::ui::MouseEvent& e) override;
     void OnMouseUp(rex::ui::MouseEvent& e) override;
     void OnMouseMove(rex::ui::MouseEvent& e) override;
