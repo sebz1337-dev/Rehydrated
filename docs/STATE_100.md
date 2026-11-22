@@ -1,6 +1,6 @@
 # STATE_100 — measured gaps toward 100%
 
-**Date:** 2026-11-22 · **Repo:** `E:\dev\d3\Rehydrated` · **Scope:** decomp-only; PC proxy out of scope.
+**Date:** 2026-11-22 · **Repo:** `E:\dev\d3\Rehydrated` · **Scope:** decomp-only, plus owner-authorized PC proxy debugging from 2026-11-22 16:55.
 All numbers measured from the current worktree, not recalled.
 
 > **UPDATE (owner-authorized redefinition):** the literal function-coverage
@@ -9,11 +9,14 @@ All numbers measured from the current worktree, not recalled.
 > name. Guest imports are already named `__imp__X` by the SDK registry, so
 > they are excluded from the config target set. Measured 2026-11-22:
 > **74 hook/callee targets**, of which 34 were already named; 8 hook-target
-> names and 32 call-graph-derived names were added. `0x823C04A8` is a
-> mid-function hook address that cannot be a function start (naming it
-> breaks branch validation), so it is excluded with reason. **Final:
-> 73/73 targets named**, config names 3,907 → 3,947. Target list:
-> `E:\dev\d3\coverage_targets.txt`.
+> names and 32 call-graph-derived names were added. Two mid-function hook
+> addresses cannot be function starts (naming either breaks branch
+> validation): `0x823C04A8` and, found during PC-proxy debugging on
+> 2026-11-22, `0x829B8580` (split the function containing the branch target
+> `0x829B8578`, which disabled `HydraHook_XServerReadUpdate_OnJoined`).
+> Both are excluded with reason. **Final: 72/72 valid targets named**,
+> config names 3,907 → 3,947 → 3,946 (one removed with the second exclusion).
+> Target list: `E:\dev\d3\coverage_targets.txt`.
 
 ---
 
@@ -64,11 +67,28 @@ Most of the 90 are `NetDll_*` / `XNet*` (Xbox Live networking) and mic/voice exp
 
 ---
 
+## 6. PC proxy (owner-authorized follow-on, separate from the five dimensions)
+
+Measured with a prepared 1.0.8.16603 client (`E:\dev\d3\D3Client`, MD5
+`2C0A1479C17C5743C3CA6D6B148ABF82`), three byte patches applied, `Rehydrated.Bnet`
+on 1119 and recomp `--server_pc_proxy_enabled=true` on 6112:
+
+- Ports 1119 and 6112 both listening; PC client login succeeds and shows character select.
+- Incoming PC `CMSG_JOIN_BNET_GAME` (PC type 17, console type 11) is decoded by
+  `PCProxy::ReceiveMessages`; `m_joinRequested` is set.
+- **Blocked:** the recomp guest stays on its PRESS START / screen-calibration
+  screen. `HydraHook_UIStartScreen_Console_OnUpdate` fires and calls
+  `Guest_StartScreenSignIn(0, 0)`, but the guest UI does not advance, so no game
+  server exists and no outgoing messages are ever encoded/sent. The PC client
+  therefore hangs on its loading screen with the 6112 TCP session still open.
+- Diagnostic traces were temporary and have been reverted; the only source
+  change kept is the `0x829B8580` naming exclusion above.
+- Not tested in game by the agent beyond launch/login/menu; owner session needed.
+
 ## Next actions (ordered)
 
-1. **p0_4**: commit + push this file at the phase boundary.
-2. **p1**: build Ghidra pseudocode export tooling, then name functions in batches, starting with the 12 deterministic gaps and the 364 guest imports / hook targets.
-3. **p2**: work the 90 called stubs — implement or document each; rebuild the SDK patch.
-4. **p3/p4/p5**: re-verify data, get owner playtest, final audit.
-
-**Open decision for the owner:** how to redefine "100% function coverage" so it is tractable (playtest-reachable functions vs all 114,931 emitted functions).
+1. Commit + push the `0x829B8580` exclusion and this updated state.
+2. Re-run `verify_all.ps1` to confirm release/debug/smoke/dumps remain green.
+3. Owner campaign playtest log is still required to close dimensions 2 and 4.
+4. PC proxy: make the guest advance past the title screen in proxy mode (upstream
+   auto-start hook currently no-ops in this build), then re-test message flow.
