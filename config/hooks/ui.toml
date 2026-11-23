@@ -28,6 +28,18 @@ name = "HydraHook_UIMainMenu_Console_OnUpdate"
 registers = []
 after_instruction = false
 
+# The "first time flow completed" preference lives in a prefs struct that the
+# recomp cannot persist (no writable cache: device), so the Xbox start screen
+# re-activates safe-zone/gamma calibration on every login. In proxy mode the
+# server is headless, so report the flow as already completed.
+[[midasm_hook]]
+address = 0x8244A4A0
+name = "HydraHook_Prefs_GetFirstTimeFlowCompleted"
+registers = ["r3"]
+after_instruction = false
+return_on_true = true
+
+
 [[midasm_hook]]
 address = 0x8254B4B0
 name = "HydraHook_UIConsoleDesignerMenu__ProcessCompoundCommands"

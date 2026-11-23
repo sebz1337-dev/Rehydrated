@@ -75,20 +75,30 @@ on 1119 and recomp `--server_pc_proxy_enabled=true` on 6112:
 
 - Ports 1119 and 6112 both listening; PC client login succeeds and shows character select.
 - Incoming PC `CMSG_JOIN_BNET_GAME` (PC type 17, console type 11) is decoded by
-  `PCProxy::ReceiveMessages`; `m_joinRequested` is set.
-- **Blocked:** the recomp guest stays on its PRESS START / screen-calibration
-  screen. `HydraHook_UIStartScreen_Console_OnUpdate` fires and calls
-  `Guest_StartScreenSignIn(0, 0)`, but the guest UI does not advance, so no game
-  server exists and no outgoing messages are ever encoded/sent. The PC client
-  therefore hangs on its loading screen with the 6112 TCP session still open.
-- Diagnostic traces were temporary and have been reverted; the only source
-  change kept is the `0x829B8580` naming exclusion above.
-- Not tested in game by the agent beyond launch/login/menu; owner session needed.
+  `PCProxy::ReceiveMessages`; `m_joinRequested` gates the server's Start button.
+- **Root cause of the stuck server found and fixed:** `Prefs__GetFirstTimeFlowCompleted`
+  (0x8244A4A0) reads a prefs field that never persists in this environment (the
+  SDK deliberately leaves `cache:` unmounted), so the Xbox start screen kept
+  re-activating the safe-zone/gamma first-time flow. A hook now returns a guest
+  pointer to a `u32` set to 1 ("completed") while proxy mode is enabled. The
+  server then reaches Hero Creation, hosts a game after the PC client joins, and
+  translates its messages to the PC client.
+- **Owner-driven end-to-end result (2026-11-22):** PC client loaded into New
+  Tristam with chat `Gorr says: This place reeks of death. The fallen star is
+  near.` — the server's hero name was translated and delivered. Proxy log
+  `recomp_20261122_201713.log`: 525 `sent` lines, 81,917 bytes to the client,
+  0 invalid/truncated/corrupt warnings, TCP 6112 ESTABLISHED. Recomp log
+  `rehydrated_048.log`: errors=2 (both documented benign `cache:\` lines),
+  STUB=0, no crash.
+- All temporary diagnostic hooks were removed; the kept source changes are the
+  `0x8244A4A0` pref hook and the `0x829B8580` naming exclusion above.
+- Not tested in game by the agent beyond launch/login/menu; the owner drove the
+  successful session. Owner reported one `BAD DATA :)` string on screen; it is
+  not present in our binaries, the PC client EXE/DLL, or the Bnet emulator source
+  (likely a guest asset string). Context needs owner description.
 
 ## Next actions (ordered)
 
-1. Commit + push the `0x829B8580` exclusion and this updated state.
-2. Re-run `verify_all.ps1` to confirm release/debug/smoke/dumps remain green.
-3. Owner campaign playtest log is still required to close dimensions 2 and 4.
-4. PC proxy: make the guest advance past the title screen in proxy mode (upstream
-   auto-start hook currently no-ops in this build), then re-test message flow.
+1. Commit + push the proxy fix and this updated state.
+2. Owner campaign playtest log is still required to close dimensions 2 and 4.
+3. Describe the context of the `BAD DATA :)` string if it recurs.

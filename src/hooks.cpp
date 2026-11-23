@@ -204,6 +204,17 @@ bool HydraHook_UIStartScreen_Console_OnUpdate()
     return PCProxy::Instance().OnStartScreenUpdate();
 }
 
+bool HydraHook_Prefs_GetFirstTimeFlowCompleted(PPCRegister& r3)
+{
+    if (!PCProxy::Instance().IsEnabled())
+        return false;
+
+    // Return a pointer to a guest-visible u32 containing 1 ("completed").
+    static u32 s_firstTimeFlowCompleted = 1;
+    r3.u32 = Memory::GetGuestPtr(&s_firstTimeFlowCompleted);
+    return true;
+}
+
 void HydraHook_UIMainMenu_Console_OnUpdate()
 {
     PCProxy::Instance().OnMainMenuUpdate();
