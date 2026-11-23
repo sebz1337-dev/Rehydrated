@@ -10,6 +10,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_options(-mssse3)
 
+# Enable AMD FidelityFX upscaling by default for the recomp so FSR/CAS output
+# effects are available out of the box. Declared before the SDK subdirectory is
+# added so the SDK's own option() keeps this value. Override with
+# -DREXGLUE_ENABLE_FIDELITYFX=OFF on a fresh configure if needed.
+option(REXGLUE_ENABLE_FIDELITYFX "Enable optional AMD FidelityFX integration (experimental)" ON)
+
 include(generated/rexglue.cmake)
 
 # Sources
@@ -22,6 +28,7 @@ set(REHYDRATED_SOURCES
     src/game/network/game_message_type.cpp
     src/recomp/designer_menu.cpp
     src/recomp/gameplay_options.cpp
+    src/recomp/graphics_presets.cpp
     src/recomp/input_manager.cpp
     src/recomp/static_data_dumper.cpp
     src/recomp/network/game_message_dumper.cpp
