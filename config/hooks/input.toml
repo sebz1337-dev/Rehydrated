@@ -16,8 +16,10 @@ after_instruction = false
 return_on_true = true
 
 # CPlayerUtilGetTarget has an early out on consoles that needs to be adjusted for PC input to work.
+# Verified necessary: disabling this breaks right-click movement entirely.
 [[midasm_hook]]
 address = 0x825717F0
 name = "HydraHook_CPlayerUtilGetTarget"
 registers = ["r3", "r4", "r5", "r6", "r7", "r8"]
 after_instruction = false
+

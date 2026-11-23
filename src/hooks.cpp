@@ -66,7 +66,15 @@ bool HydraHook_InputUpdate()
 
 void HydraHook_CPlayerUtilGetTarget(PPCRegister& r3, PPCRegister& r4, PPCRegister& r5, PPCRegister& r6, PPCRegister& r7, PPCRegister& r8)
 {
-    // Clear the ResolvedClick pointer to force this function to go through the full path like on PC.
+    // Preserve a cached *actor* target only for left-click attacks. Right/middle
+    // clicks must always force fresh ground resolution, otherwise a move click
+    // right after an attack inherits the actor and becomes another attack.
+    const MouseButton lastButton = InputManager::LastMouseButton();
+    const bool forceGround = lastButton == RIGHT_MOUSE_BUTTON || lastButton == MIDDLE_MOUSE_BUTTON;
+    const ResolvedClick* click = r8.u32 ? Memory::GetHostPtr<const ResolvedClick>(r8.u32) : nullptr;
+    if (!forceGround && click && click->idRActor.get() != RACTORID_INVALID)
+        return;
+
     r8.s32 = 0;
 }
 

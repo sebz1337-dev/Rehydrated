@@ -1,13 +1,71 @@
 #include "recomp/input_manager.h"
 
+#include <algorithm>
+
 #include <rex/cvar.h>
 #include <rex/logging.h>
+#include <rex/ui/flags.h>
 #include <rex/ui/virtual_key.h>
 
 #include "core/memory.h"
 
 REXCVAR_DEFINE_BOOL(enable_mnk_input, false, "Hydra/Gameplay", "(EXPERIMENTAL) Enables mouse and keyboard input")
     .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
+REXCVAR_DEFINE_BOOL(mnk_left_click_as_button, false, "Hydra/Gameplay",
+                    "Also inject a synthetic A-button press on left mouse click")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
+MouseButton InputManager::m_lastMouseButton = NO_MOUSE_BUTTON;
+
+REXCVAR_DEFINE_BOOL(mnk_keyboard_as_controller, false, "Hydra/Gameplay",
+                    "Translate keyboard keys into console controller actions (reuses SDK MNK bindings)")
+    .lifecycle(rex::cvar::Lifecycle::kHotReload);
+
+namespace
+{
+
+bool KeyToButton(rex::ui::VirtualKey vk, InputButton& button)
+{
+    using rex::ui::VirtualKey;
+    switch (vk)
+    {
+        case VirtualKey::kOem1:   case VirtualKey::kSpace:     button = BUTTON_1; return true;  // A
+        case VirtualKey::kOem7:   case VirtualKey::kBack:      button = BUTTON_2; return true;  // B
+        case VirtualKey::kL:                                  button = BUTTON_3; return true;  // X
+        case VirtualKey::kP:                                  button = BUTTON_4; return true;  // Y
+        case VirtualKey::k1:      case VirtualKey::k3:
+            button = vk == VirtualKey::k1 ? BUTTON_LEFT_SHOULDER : BUTTON_RIGHT_SHOULDER;
+            return true;
+        case VirtualKey::kQ:      case VirtualKey::kI:
+            button = BUTTON_LEFT_TRIGGER; return true;
+        case VirtualKey::kE:      case VirtualKey::kO:
+            button = BUTTON_RIGHT_TRIGGER; return true;
+        case VirtualKey::kReturn: case VirtualKey::kX:
+            button = BUTTON_START; return true;
+        case VirtualKey::kTab:    case VirtualKey::kZ:
+            button = BUTTON_BACK; return true;
+        default:
+            return false;
+    }
+}
+
+bool KeyToStick(rex::ui::VirtualKey vk, int32_t& x, int32_t& y)
+{
+    using rex::ui::VirtualKey;
+    x = 0;
+    y = 0;
+    switch (vk)
+    {
+        case VirtualKey::kW: y = 1;  return true;
+        case VirtualKey::kS: y = -1; return true;
+        case VirtualKey::kA: x = -1; return true;
+        case VirtualKey::kD: x = 1;  return true;
+        default: return false;
+    }
+}
+
+}  // namespace
 
 namespace
 {
@@ -149,9 +207,32 @@ InputManager::InputManager() :
 
 void InputManager::Initialize(rex::ui::Window* window)
 {
+    m_window = window;
     window->AddInputListener(this, 32);
     window->AddListener(this);
     REXLOG_INFO("Input initialized");
+}
+
+void InputManager::SetMousePosition(BufferedInput& input, int32_t x, int32_t y)
+{
+    // Mouse events arrive in window coordinates, but the guest resolves clicks
+    // in its video mode coordinate space (1280x720 by default). Scale so the
+    // cursor the user sees lines up with the target the game picks.
+    if (m_window)
+    {
+        const uint32_t windowWidth = m_window->GetActualLogicalWidth();
+        const uint32_t windowHeight = m_window->GetActualLogicalHeight();
+        const int32_t guestWidth = std::max<int32_t>(1, REXCVAR_GET(video_mode_width));
+        const int32_t guestHeight = std::max<int32_t>(1, REXCVAR_GET(video_mode_height));
+        if (windowWidth && windowHeight)
+        {
+            x = static_cast<int32_t>(static_cast<int64_t>(x) * guestWidth / windowWidth);
+            y = static_cast<int32_t>(static_cast<int64_t>(y) * guestHeight / windowHeight);
+        }
+    }
+
+    input.tBufMouseData.p.x = x;
+    input.tBufMouseData.p.y = y;
 }
 
 bool InputManager::OnGuestInputUpdate()
@@ -171,8 +252,19 @@ bool InputManager::OnGuestInputUpdate()
 
     while (!currentInput.empty())
     {
-        InputBufferInput(currentInput.front(), 0);
+        // Force injection: the guest drops non-forced events while its internal
+        // input-suppression counter is positive (cutscenes, menus, combat).
+        InputBufferInput(currentInput.front(), 1);
         currentInput.pop_front();
+    }
+
+    if (m_buttonReleaseCountdown > 0 && --m_buttonReleaseCountdown == 0)
+    {
+        BufferedInput release = {};
+        release.eInputMsg = INPUTMSG_CONTROLLERBUTTONUP;
+        release.tBufControllerData.nControllerIndex = 0;
+        release.tBufControllerData.eInputButton = BUTTON_1;
+        QueueInput(release);
     }
 
     return true;
@@ -184,22 +276,42 @@ void InputManager::OnMouseDown(rex::ui::MouseEvent& e)
         return;
 
     BufferedInput tInput = {};
+    const bool leftAsButton = REXCVAR_GET(mnk_left_click_as_button) &&
+                              e.button() == rex::ui::MouseEvent::Button::kLeft;
 
     switch (e.button())
     {
         case rex::ui::MouseEvent::Button::kLeft:
-            tInput.eInputMsg = INPUTMSG_LEFTMOUSEDOWN;
-            tInput.tBufMouseData.eMouseButton = LEFT_MOUSE_BUTTON;
+            m_lastMouseButton = LEFT_MOUSE_BUTTON;
+            if (!leftAsButton)
+            {
+                tInput.eInputMsg = INPUTMSG_LEFTMOUSEDOWN;
+                tInput.tBufMouseData.eMouseButton = LEFT_MOUSE_BUTTON;
+            }
             break;
 
         case rex::ui::MouseEvent::Button::kRight:
             tInput.eInputMsg = INPUTMSG_RIGHTMOUSEDOWN;
             tInput.tBufMouseData.eMouseButton = RIGHT_MOUSE_BUTTON;
+            m_lastMouseButton = RIGHT_MOUSE_BUTTON;
+            // Release a pending synthetic A press immediately: a right-click landing
+            // while A is still held becomes an attack instead of a move.
+            if (m_buttonReleaseCountdown > 0)
+            {
+                BufferedInput release = {};
+                release.eInputMsg = INPUTMSG_CONTROLLERBUTTONUP;
+                release.tBufControllerData.nControllerIndex = 0;
+                release.tBufControllerData.eInputButton = BUTTON_1;
+                SetMousePosition(release, e.x(), e.y());
+                QueueInput(release);
+                m_buttonReleaseCountdown = 0;
+            }
             break;
 
         case rex::ui::MouseEvent::Button::kMiddle:
             tInput.eInputMsg = INPUTMSG_MIDDLEMOUSEDOWN;
             tInput.tBufMouseData.eMouseButton = MIDDLE_MOUSE_BUTTON;
+            m_lastMouseButton = MIDDLE_MOUSE_BUTTON;
             break;
 
         case rex::ui::MouseEvent::Button::kX1:
@@ -216,10 +328,35 @@ void InputManager::OnMouseDown(rex::ui::MouseEvent& e)
             return;
     }
     
-    tInput.tBufMouseData.p.x = e.x();
-    tInput.tBufMouseData.p.y = e.y();
+    if (!leftAsButton)
+    {
+        SetMousePosition(tInput, e.x(), e.y());
+        QueueInput(tInput);
+    }
 
-    QueueInput(tInput);
+    if (e.button() == rex::ui::MouseEvent::Button::kLeft)
+    {
+        if (!leftAsButton)
+        {
+            // D3's attack/interact path reads the "still down" state rather than the
+            // initial press, so a down/up pair inside one guest tick does nothing.
+            tInput.eInputMsg = INPUTMSG_LEFTMOUSESTILLDOWN;
+            QueueInput(tInput);
+        }
+        else
+        {
+            // In A-button mode inject ONLY the controller press for this click.
+            // Injecting native LEFTMOUSEDOWN as well leaves conflicting attack state
+            // that a later right-click can inherit.
+            BufferedInput button = {};
+            button.eInputMsg = INPUTMSG_CONTROLLERBUTTONDOWN;
+            button.tBufControllerData.nControllerIndex = 0;
+            button.tBufControllerData.eInputButton = BUTTON_1;
+            SetMousePosition(button, e.x(), e.y());
+            QueueInput(button);
+            m_buttonReleaseCountdown = 1;
+        }
+    }
 }
 
 void InputManager::OnMouseUp(rex::ui::MouseEvent& e)
@@ -228,12 +365,17 @@ void InputManager::OnMouseUp(rex::ui::MouseEvent& e)
         return;
 
     BufferedInput tInput = {};
+    const bool leftAsButton = REXCVAR_GET(mnk_left_click_as_button) &&
+                              e.button() == rex::ui::MouseEvent::Button::kLeft;
 
     switch (e.button())
     {
         case rex::ui::MouseEvent::Button::kLeft:
-            tInput.eInputMsg = INPUTMSG_LEFTMOUSEUP;
-            tInput.tBufMouseData.eMouseButton = LEFT_MOUSE_BUTTON;
+            if (!leftAsButton)
+            {
+                tInput.eInputMsg = INPUTMSG_LEFTMOUSEUP;
+                tInput.tBufMouseData.eMouseButton = LEFT_MOUSE_BUTTON;
+            }
             break;
 
         case rex::ui::MouseEvent::Button::kRight:
@@ -260,8 +402,10 @@ void InputManager::OnMouseUp(rex::ui::MouseEvent& e)
             return;
     }
 
-    tInput.tBufMouseData.p.x = e.x();
-    tInput.tBufMouseData.p.y = e.y();
+    if (leftAsButton)
+        return;
+
+    SetMousePosition(tInput, e.x(), e.y());
 
     QueueInput(tInput);
 }
@@ -274,8 +418,7 @@ void InputManager::OnMouseMove(rex::ui::MouseEvent& e)
     BufferedInput tInput = {};
     tInput.eInputMsg = INPUTMSG_MOUSEMOVE;
     tInput.tBufMouseData.eMouseButton = NO_MOUSE_BUTTON;
-    tInput.tBufMouseData.p.x = e.x();
-    tInput.tBufMouseData.p.y = e.y();
+    SetMousePosition(tInput, e.x(), e.y());
 
     QueueInput(tInput);
 }
@@ -288,8 +431,7 @@ void InputManager::OnMouseWheel(rex::ui::MouseEvent& e)
     BufferedInput tInput = {};
     tInput.eInputMsg = INPUTMSG_MOUSEWHEEL;
     tInput.tBufMouseData.eMouseButton = NO_MOUSE_BUTTON;
-    tInput.tBufMouseData.p.x = e.x();
-    tInput.tBufMouseData.p.y = e.y();
+    SetMousePosition(tInput, e.x(), e.y());
     tInput.tBufMouseData.nDeltaMouseWheel = e.scroll_y() / rex::ui::MouseEvent::kScrollPerDetent;
 
     QueueInput(tInput);
@@ -300,13 +442,39 @@ void InputManager::OnKeyDown(rex::ui::KeyEvent& e)
     if (!REXCVAR_GET(enable_mnk_input))
         return;
 
+    if (REXCVAR_GET(mnk_keyboard_as_controller))
+    {
+        const auto vk = e.virtual_key();
+        InputButton button = BUTTON_INVALID;
+        int32_t sx = 0, sy = 0;
+        if (KeyToStick(vk, sx, sy))
+        {
+            BufferedInput input = {};
+            input.eInputMsg = INPUTMSG_LEFTSTICK;
+            input.tBufControllerData.nControllerIndex = 0;
+            input.tBufControllerData.vLeftStick.x = static_cast<float>(sx);
+            input.tBufControllerData.vLeftStick.y = static_cast<float>(sy);
+            QueueInput(input);
+            return;
+        }
+        if (KeyToButton(vk, button))
+        {
+            BufferedInput input = {};
+            input.eInputMsg = INPUTMSG_CONTROLLERBUTTONDOWN;
+            input.tBufControllerData.nControllerIndex = 0;
+            input.tBufControllerData.eInputButton = button;
+            QueueInput(input);
+            return;
+        }
+    }
+
     const Key key = GameKeyFromVirtualKey(e.virtual_key());
     if (key == KEY_NONE)
         return;
 
     BufferedInput tInput = {};
     tInput.eInputMsg = INPUTMSG_KEYDOWN;
-    tInput.tBufKeyData.wPlatformKey = key;
+    tInput.tBufKeyData.wPlatformKey = static_cast<u32>(key) << 16;
     tInput.tBufKeyData.eKey = key;
 
     QueueInput(tInput);
@@ -317,13 +485,39 @@ void InputManager::OnKeyUp(rex::ui::KeyEvent& e)
     if (!REXCVAR_GET(enable_mnk_input))
         return;
 
+    if (REXCVAR_GET(mnk_keyboard_as_controller))
+    {
+        const auto vk = e.virtual_key();
+        InputButton button = BUTTON_INVALID;
+        int32_t sx = 0, sy = 0;
+        if (KeyToStick(vk, sx, sy))
+        {
+            BufferedInput input = {};
+            input.eInputMsg = INPUTMSG_LEFTSTICK;
+            input.tBufControllerData.nControllerIndex = 0;
+            input.tBufControllerData.vLeftStick.x = 0.0f;
+            input.tBufControllerData.vLeftStick.y = 0.0f;
+            QueueInput(input);
+            return;
+        }
+        if (KeyToButton(vk, button))
+        {
+            BufferedInput input = {};
+            input.eInputMsg = INPUTMSG_CONTROLLERBUTTONUP;
+            input.tBufControllerData.nControllerIndex = 0;
+            input.tBufControllerData.eInputButton = button;
+            QueueInput(input);
+            return;
+        }
+    }
+
     const Key key = GameKeyFromVirtualKey(e.virtual_key());
     if (key == KEY_NONE)
         return;
 
     BufferedInput tInput = {};
     tInput.eInputMsg = INPUTMSG_KEYUP;
-    tInput.tBufKeyData.wPlatformKey = key;
+    tInput.tBufKeyData.wPlatformKey = static_cast<u32>(key) << 16;
     tInput.tBufKeyData.eKey = key;
 
     QueueInput(tInput);
