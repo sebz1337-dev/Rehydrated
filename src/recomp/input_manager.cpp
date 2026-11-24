@@ -3,10 +3,10 @@
 #include <algorithm>
 
 #include <rex/cvar.h>
-#include <rex/logging.h>
 #include <rex/ui/flags.h>
 #include <rex/ui/virtual_key.h>
 
+#include "core/logging.h"
 #include "core/memory.h"
 
 REXCVAR_DEFINE_BOOL(enable_mnk_input, false, "Hydra/Gameplay", "(EXPERIMENTAL) Enables mouse and keyboard input")
@@ -210,7 +210,7 @@ void InputManager::Initialize(rex::ui::Window* window)
     m_window = window;
     window->AddInputListener(this, 32);
     window->AddListener(this);
-    REXLOG_INFO("Input initialized");
+    LOG_INFO("Input initialized");
 }
 
 void InputManager::SetMousePosition(BufferedInput& input, int32_t x, int32_t y)
